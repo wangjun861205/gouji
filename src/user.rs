@@ -1,5 +1,5 @@
 use crate::card::Hand;
-use crate::message::Message;
+use crate::message::InnerMessage;
 use actix::{dev::MessageResponse, Actor, ActorContext, Context, Handler, StreamHandler};
 use actix_web_actors::ws::WebsocketContext;
 pub struct User {
@@ -10,11 +10,11 @@ impl Actor for User {
     type Context = Context<Self>;
 }
 
-impl Handler<Message> for User {
+impl Handler<InnerMessage> for User {
     type Result = Result<(), String>;
-    fn handle(&mut self, msg: Message, ctx: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, msg: InnerMessage, ctx: &mut Self::Context) -> Self::Result {
         match msg {
-            Message::OutUser(deck, set) => {
+            InnerMessage::Out { deck, set } => {
                 if set.is_greater_than(&deck) {
                     if !self.hand.subtract(&set) {
                         return Err("cards is not enough".into());

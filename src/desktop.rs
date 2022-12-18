@@ -1,25 +1,45 @@
-use crate::{card::Hand, message::Message};
-use actix::{Actor, Addr, StreamHandler};
+use crate::{
+    card::Hand,
+    message::{InnerMessage, Response},
+};
+use actix::{Actor, Addr, Context, Handler};
+use actix_web_actors::ws;
 
 use crate::user::User;
-use actix_web_actors::ws::{self, WebsocketContext};
 
+#[derive(Clone)]
 pub struct Desktop {
-    addrs: Vec<Addr<User>>,
+    users: Vec<Addr<User>>,
+}
+
+impl Desktop {
+    pub fn new() -> Self {
+        Self { users: Vec::new() }
+    }
 }
 
 impl Actor for Desktop {
-    type Context = WebsocketContext<Self>;
+    type Context = Context<Self>;
 }
 
-impl StreamHandler<Message> for Desktop {
-    fn handle(&mut self, item: Message, ctx: &mut Self::Context) {
-        match item {
-            Join => {
-                let user = User { hand: Hand::new(Vec::new()) };
-                let addr = user.start();
-                self.addrs.push(addr);
+impl Handler<InnerMessage> for Desktop {
+    type Result = Result<(), String>;
+
+    fn handle(&mut self, msg: InnerMessage, ctx: &mut Self::Context) -> Self::Result {
+        match msg {
+            InnerMessage::Sit { uid, desktop_id, ws_addr } => {
+                if self.users.len() == 6 {
+                    ws_addr
+                        .try_send(Response::Sit {
+                            is_ok: false,
+                            reason: "desktop is full".into(),
+                        })
+                        .unwrap();
+                    return Ok(());
+                }
             }
+            _ => {}
         }
+        Ok(())
     }
 }
